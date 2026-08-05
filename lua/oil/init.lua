@@ -276,7 +276,11 @@ M.open_float = function(dir, opts, cb)
       desc = "Close floating oil window",
       group = "Oil",
       callback = vim.schedule_wrap(function()
-        if util.is_floating_win() or vim.fn.win_gettype() == "command" then
+        if
+          (vim.api.nvim_win_is_valid(winid) and vim.w[winid].oil_skip_close)
+          or util.is_floating_win()
+          or vim.fn.win_gettype() == "command"
+        then
           return
         end
         if vim.api.nvim_win_is_valid(winid) then
@@ -477,6 +481,7 @@ M.open_preview = function(opts, callback)
   local preview_win = util.get_preview_win({ include_not_owned = true })
   local prev_win = vim.api.nvim_get_current_win()
   local bufnr = vim.api.nvim_get_current_buf()
+  local oil_winid = prev_win
 
   local entry = M.get_cursor_entry()
   if not entry then
@@ -729,9 +734,26 @@ M.select = function(opts, callback)
         return cb("Please save changes before entering new directory")
       end
     else
-      -- Close floating window before opening a file
+      -- Close floating window before opening a file unless the caller wants to keep it open.
       if vim.w.is_oil_win then
-        M.close()
+        if opts.close == false then
+          local original_win = vim.w.oil_original_win
+          if original_win and vim.api.nvim_win_is_valid(original_win) then
+            -- Leaving the floating window normally closes it. Suppress that one transition
+            -- while moving focus to the original window so the file opens beside Oil.
+            vim.w.oil_skip_close = true
+            vim.api.nvim_set_current_win(original_win)
+            vim.schedule(function()
+              if vim.api.nvim_win_is_valid(oil_winid) then
+                vim.w[oil_winid].oil_skip_close = false
+              end
+            end)
+          else
+            M.close()
+          end
+        else
+          M.close()
+        end
       end
     end
 
