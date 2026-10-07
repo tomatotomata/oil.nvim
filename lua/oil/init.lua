@@ -481,7 +481,6 @@ M.open_preview = function(opts, callback)
   local preview_win = util.get_preview_win({ include_not_owned = true })
   local prev_win = vim.api.nvim_get_current_win()
   local bufnr = vim.api.nvim_get_current_buf()
-  local oil_winid = prev_win
 
   local entry = M.get_cursor_entry()
   if not entry then
@@ -737,6 +736,7 @@ M.select = function(opts, callback)
       -- Close floating window before opening a file unless the caller wants to keep it open.
       if vim.w.is_oil_win then
         if opts.close == false then
+          local oil_winid = vim.api.nvim_get_current_win()
           local original_win = vim.w.oil_original_win
           if original_win and vim.api.nvim_win_is_valid(original_win) then
             -- Leaving the floating window normally closes it. Suppress that one transition
